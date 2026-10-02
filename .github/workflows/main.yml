@@ -1,0 +1,39 @@
+name: Build Plugin
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Compile DLL
+      run: |
+        $stub = @"
+        using System;
+        namespace Rage {
+            public class Plugin { public virtual void Initialize() {} public virtual void Finally() {} }
+            public static class Game { public static void LogTrivial(string text) {} public static void DisplayNotification(string text) {} public static bool IsKeyDown(System.Windows.Forms.Keys key) => false; public static LocalPlayer LocalPlayer { get; } }
+            public class LocalPlayer { public Ped Character { get; } }
+            public class GameFiber { public static void StartNew(Action action) {} public static void Yield() {} }
+            public struct Vector3 { public static Vector3 Zero => new Vector3(); }
+            public struct Rotator { public static Rotator Zero => new Rotator(); }
+            public class Model { public Model(string name) {} public bool IsValid => true; public void LoadAndWait() {} }
+            public class Object { public Object(Model model, Vector3 pos) {} public bool Exists() => true; public void Delete() {} public void AttachTo(Entity entity, int boneIndex, Vector3 pos, Rotator rot) {} }
+            public class Entity { public Vector3 Position { get; } }
+            public class Ped : Entity { public Tasks Tasks { get; } public int GetBoneIndex(PedBoneId boneId) => 0; public bool Exists() => true; }
+            public class Tasks { public void PlayAnimation(string dict, string anim, float speed, AnimationFlags flags) {} public void ClearSecondary() {} }
+            public enum PedBoneId { SKEL_R_Hand = 28422 }
+            [Flags] public enum AnimationFlags { UpperBodyOnly = 16, Loop = 1 }
+        }
+        namespace LSPD_First_Response.Mod.API { public class Plugin : Rage.Plugin {} }
+        "@
+        Set-Content -Path "RageStub.cs" -Value $stub
+        csc /target:library /out:"BluebirdLSPDFR.dll" /r:"System.Windows.Forms.dll" Main.cs RageStub.cs
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BluebirdLSPDFR-Plugin
+        path: BluebirdLSPDFR.dll
