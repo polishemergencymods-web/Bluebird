@@ -8,7 +8,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
     - name: Compile DLL
+      shell: powershell
       run: |
         $stub = @"
         using System;
@@ -30,7 +34,9 @@ jobs:
         namespace LSPD_First_Response.Mod.API { public class Plugin : Rage.Plugin {} }
         "@
         Set-Content -Path "RageStub.cs" -Value $stub
-        csc /target:library /out:"BluebirdLSPDFR.dll" /r:"System.Windows.Forms.dll" Main.cs RageStub.cs
+        
+        $csc = Get-ChildItem -Path "C:\Program Files\Microsoft Visual Studio" -Filter "csc.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+        & $csc /target:library /out:"BluebirdLSPDFR.dll" /r:"System.Windows.Forms.dll" Main.cs RageStub.cs
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
